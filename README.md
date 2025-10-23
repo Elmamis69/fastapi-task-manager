@@ -30,12 +30,19 @@ Perfect to practice CRUD operations, validation with Pydantic, and REST API desi
 app/
 
 init.py
+
 main.py
+
 db.py
+
 models.py
+
 schemas.py
+
 crud.py
+
 requirements.txt
+
 
 ---
 
