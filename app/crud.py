@@ -1,20 +1,49 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete
-from typing import Sequence
+from sqlalchemy import select, update, delete, func
+from typing import Sequence, Literal
 from . import models, schemas
+
+OrderBy = Literal["due_date", "created_at", "title"]
 
 async def list_tasks(
     session: AsyncSession,
     completed: bool | None = None,
     limit: int = 50,
-    offset: int = 0
-) -> Sequence[models.Task]:
-    stmt = select(models.Task).order_by(models.Task.due_date.is_(None), models.Task.due_date, models.Task.created_at)
+    offset: int = 0,
+    order_by: OrderBy = "due_date",
+    order_dir: Literal["asc", "desc"] = "asc",
+):
+    # base query
+    stmt = select(models.Task)
     if completed is not None:
         stmt = stmt.filter(models.Task.is_completed == completed)
+
+    # ordering
+    order_col = {
+        "due_date": models.Task.due_date,
+        "created_at": models.Task.created_at,
+        "title": models.Task.title,
+    }[order_by]
+
+    if order_by == "due_date":
+        # nulls last
+        stmt = stmt.order_by(models.Task.due_date.is_(None))
+    stmt = stmt.order_by(order_col.desc() if order_dir == "desc" else order_col.asc())
+
+    # pagination
     stmt = stmt.limit(limit).offset(offset)
+
+    # fetch items
     result = await session.execute(stmt)
-    return result.scalars().all()
+    items = result.scalars().all()
+
+    # total count (with same filter but without limit/offset)
+    count_stmt = select(func.count(models.Task.id))
+    if completed is not None:
+        count_stmt = count_stmt.filter(models.Task.is_completed == completed)
+    total = (await session.execute(count_stmt)).scalar_one()
+
+    return items, total
 
 async def get_task(session: AsyncSession, task_id: int) -> models.Task | None:
     result = await session.execute(select(models.Task).where(models.Task.id == task_id))
@@ -44,7 +73,6 @@ async def update_task(session: AsyncSession, task_id: int, payload: schemas.Task
         await session.rollback()
         return None
     await session.commit()
-    # row[0] is models.Task (SQLAlchemy 2.0 returning)
     return row[0]
 
 async def delete_task(session: AsyncSession, task_id: int) -> bool:

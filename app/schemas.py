@@ -22,3 +22,13 @@ class TaskOut(TaskBase):
 
     class Config:
         from_attributes = True
+
+# ---------- NEW: pagination metadata ----------
+class PageMeta(BaseModel):
+    total: int
+    limit: int
+    offset: int
+
+class TaskListOut(BaseModel):
+    items: list[TaskOut]
+    meta: PageMeta
