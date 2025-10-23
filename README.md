@@ -38,6 +38,17 @@ requirements.txt
 
 ---
 
+## Roadmap
+[] Add JWT authentication
+
+[] Add pagination metadata (total, pages)
+
+[] Add unit tests (pytest)
+
+[] Dockerize
+
+[] Deploy to Render/Railway
+
 ## 🚀 Getting started
 
 ### 1️⃣ Setup environment
