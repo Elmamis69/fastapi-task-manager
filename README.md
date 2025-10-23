@@ -28,6 +28,7 @@ Perfect to practice CRUD operations, validation with Pydantic, and REST API desi
 
 ## 📁 Project structure
 app/
+
 init.py
 main.py
 db.py
