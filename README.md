@@ -63,6 +63,7 @@ source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
+```
 
 ### 2️⃣ Run the API
 uvicorn app.main:app --reload
