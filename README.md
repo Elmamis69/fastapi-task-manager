@@ -39,15 +39,14 @@ requirements.txt
 ---
 
 ## Roadmap
+- [x] Initialize repository with README and MIT License
 - [] Add JWT authentication
-
 - [] Add pagination metadata (total, pages)
-
 - [] Add unit tests (pytest)
-
 - [] Dockerize
-
 - [] Deploy to Render/Railway
+
+---
 
 ## 🚀 Getting started
 
