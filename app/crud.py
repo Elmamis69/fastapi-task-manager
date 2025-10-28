@@ -1,82 +1,85 @@
+from typing import Literal
+from sqlalchemy import select, func, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, func
-from typing import Sequence, Literal
-from . import models, schemas
+from .models import Task
+from . import schemas
 
 OrderBy = Literal["due_date", "created_at", "title"]
 
 async def list_tasks(
     session: AsyncSession,
-    completed: bool | None = None,
-    limit: int = 50,
-    offset: int = 0,
-    order_by: OrderBy = "due_date",
-    order_dir: Literal["asc", "desc"] = "asc",
+    user_id: int,
+    completed: bool | None,
+    limit: int,
+    offset: int,
+    order_by: OrderBy,
+    order_dir: str,
 ):
-    # base query
-    stmt = select(models.Task)
+    q = select(Task).where(Task.user_id == user_id)
     if completed is not None:
-        stmt = stmt.filter(models.Task.is_completed == completed)
-
-    # ordering
-    order_col = {
-        "due_date": models.Task.due_date,
-        "created_at": models.Task.created_at,
-        "title": models.Task.title,
-    }[order_by]
+        q = q.where(Task.is_completed == completed)
 
     if order_by == "due_date":
-        # nulls last
-        stmt = stmt.order_by(models.Task.due_date.is_(None))
-    stmt = stmt.order_by(order_col.desc() if order_dir == "desc" else order_col.asc())
+        order_col = Task.due_date
+    elif order_by == "title":
+        order_col = Task.title
+    else:
+        order_col = Task.created_at
 
-    # pagination
-    stmt = stmt.limit(limit).offset(offset)
+    q = q.order_by(order_col.desc() if order_dir == "desc" else order_col.asc()).limit(limit).offset(offset)
+    res = await session.execute(q)
+    items = res.scalars().all()
 
-    # fetch items
-    result = await session.execute(stmt)
-    items = result.scalars().all()
-
-    # total count (with same filter but without limit/offset)
-    count_stmt = select(func.count(models.Task.id))
+    count_q = select(func.count()).select_from(Task).where(Task.user_id == user_id)
     if completed is not None:
-        count_stmt = count_stmt.filter(models.Task.is_completed == completed)
-    total = (await session.execute(count_stmt)).scalar_one()
+        count_q = count_q.where(Task.is_completed == completed)
+    total = (await session.execute(count_q)).scalar_one()
 
     return items, total
 
-async def get_task(session: AsyncSession, task_id: int) -> models.Task | None:
-    result = await session.execute(select(models.Task).where(models.Task.id == task_id))
-    return result.scalar_one_or_none()
 
-async def create_task(session: AsyncSession, payload: schemas.TaskCreate) -> models.Task:
-    task = models.Task(**payload.model_dump())
+async def get_task(session: AsyncSession, user_id: int, task_id: int):
+    res = await session.execute(select(Task).where(Task.id == task_id, Task.user_id == user_id))
+    return res.scalar_one_or_none()
+
+
+async def create_task(session: AsyncSession, user_id: int, payload: schemas.TaskCreate):
+    task = Task(
+        title=payload.title,
+        description=payload.description,
+        is_completed=payload.is_completed,
+        due_date=payload.due_date,
+        user_id=user_id,
+    )
     session.add(task)
     await session.commit()
     await session.refresh(task)
     return task
 
-async def update_task(session: AsyncSession, task_id: int, payload: schemas.TaskUpdate) -> models.Task | None:
-    data = {k: v for k, v in payload.model_dump(exclude_unset=True).items()}
-    if not data:
-        return await get_task(session, task_id)
 
-    stmt = (
-        update(models.Task)
-        .where(models.Task.id == task_id)
-        .values(**data)
-        .returning(models.Task)
-    )
-    result = await session.execute(stmt)
-    row = result.fetchone()
-    if not row:
-        await session.rollback()
+async def update_task(session: AsyncSession, user_id: int, task_id: int, payload: schemas.TaskUpdate):
+    task = await get_task(session, user_id, task_id)
+    if not task:
         return None
-    await session.commit()
-    return row[0]
 
-async def delete_task(session: AsyncSession, task_id: int) -> bool:
-    stmt = delete(models.Task).where(models.Task.id == task_id)
-    result = await session.execute(stmt)
+    if payload.title is not None:
+        task.title = payload.title
+    if payload.description is not None:
+        task.description = payload.description
+    if payload.is_completed is not None:
+        task.is_completed = payload.is_completed
+    if payload.due_date is not None:
+        task.due_date = payload.due_date
+
     await session.commit()
-    return result.rowcount > 0
+    await session.refresh(task)
+    return task
+
+
+async def delete_task(session: AsyncSession, user_id: int, task_id: int) -> bool:
+    task = await get_task(session, user_id, task_id)
+    if not task:
+        return False
+    await session.delete(task)
+    await session.commit()
+    return True
