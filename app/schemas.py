@@ -1,5 +1,9 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from datetime import datetime
+
+# =========================
+# TASK SCHEMAS
+# =========================
 
 class TaskBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
@@ -23,7 +27,7 @@ class TaskOut(TaskBase):
     class Config:
         from_attributes = True
 
-# ---------- NEW: pagination metadata ----------
+
 class PageMeta(BaseModel):
     total: int
     limit: int
@@ -32,3 +36,27 @@ class PageMeta(BaseModel):
 class TaskListOut(BaseModel):
     items: list[TaskOut]
     meta: PageMeta
+
+
+# =========================
+# AUTH / USER SCHEMAS
+# =========================
+
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=6)
+
+
+class UserOut(BaseModel):
+    id: int
+    email: EmailStr
+    is_active: bool
+    created_at: datetime   # <- OJO: "created_at", no "create_at"
+
+    class Config:
+        from_attributes = True
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
