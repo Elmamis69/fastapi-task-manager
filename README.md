@@ -92,4 +92,4 @@ This project is licensed under the MIT License.
 ## Getting Started
 1. Clone the repository:
    ```bash
-https://github.com/Elmamis69/fastapi-task-manager.git
+   git clone https://github.com/Elmamis69/fastapi-task-manager.git
