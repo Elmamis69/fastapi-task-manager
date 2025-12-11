@@ -75,3 +75,21 @@ pip install -r requirements.txt
 
 ### 2️⃣ Run the API
 uvicorn app.main:app --reload
+
+## Author
+Adrián Félix
+
+Software Engineering
+
+Passionate about Android Developer, Full Stack and iOS development and clean architecture.
+
+GitHub: @Elmamis69
+Email: guerofelix234@gmail.com
+
+**License**
+This project is licensed under the MIT License.
+
+## Getting Started
+1. Clone the repository:
+   ```bash
+https://github.com/Elmamis69/fastapi-task-manager.git
